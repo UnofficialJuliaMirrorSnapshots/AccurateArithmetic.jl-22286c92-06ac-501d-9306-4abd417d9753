@@ -1,48 +1,35 @@
-#=
-function inv_2(b::T) where {T<:AbstractFloat}
-    hi = inv(b)
-    v = hi * b
-    w = fma(hi, b, -v)
-    lo = (one(T) - v - w) / b
-    return hi, lo
-end
-=#
-
-function inv_2(b::T) where {T<:AbstractFloat}
+@inline function two_inv(b::T) where {T}
      hi = inv(b)
-     lo = fma(hi, b, -one(T))
-     lo = -lo / b
+     lo = fma(-hi, b, one(T))
+     lo /= b
      return hi, lo
 end
 
-@inline inv_(b::T) where {T<:AbstractFloat} = inv_2(b)
-
-#=
-function div_(a::T, b::T) where {T<:AbstractFloat}
-    hi = a / b
-    v = hi * b
-    w = fma(hi, b, -v)
-    lo = (a - v - w) / b
-    return hi, lo
-end
-=#
-# !?! `y` must be negated to get the right result
-
-function dvi_2(a::T, b::T) where {T<:AbstractFloat}
+@inline function two_div(a::T, b::T) where {T}
      hi = a / b
-     lo = -(fma(hi, b, -a) / b)
+     lo = fma(-hi, b, a)
+     lo /= b
      return hi, lo
 end
 
-@inline dvi_(a::T, b::T) where {T<:AbstractFloat} = dvi_2(a,b)
-
-function root2_2(a::T) where {T<:AbstractFloat}
+@inline function two_sqrt(a::T) where {T}
     hi = sqrt(a)
-    lo = fma(-hi, hi, a) / (hi + hi)
+    lo = fma(-hi, hi, a)
+    lo /= 2
+    lo /= hi
     return hi, lo
 end
 
-@inline root2_(x::T) where {T<:AbstractFloat} = root2_2(x)
+
+"""
+    ad_minus_bc(a, b, c, d)
+Computes the determinant of a 2x2 matrix.
+"""
+function ad_minus_bc(a::T, b::T, c::T, d::T) where {T}
+    adhi, adlo = two_prod(a,d)
+    bchi, bclo = two_prod(b,c)
+    return four_sum(adhi, adlo, -bchi, -bclo)
+end
 
 
 #=
@@ -53,7 +40,6 @@ free transformation for the xdivision. ...
 This means that the computed approximation is as good as
 we can expect in the working precision."
 -- http://perso.ens-lyon.fr/nicolas.louvet/LaLo05.pdf
-
 While the sqrt algorithm is not strictly an errorfree transformation,
 it is known to be reliable and is recommended for general use.
 "Augmented precision square roots, 2-D norms and
