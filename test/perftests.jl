@@ -6,15 +6,19 @@ using AccurateArithmetic: accumulate, sumAcc, dotAcc, compSumAcc, compDotAcc, tw
 using AccurateArithmetic.Test
 
 output(x) = @printf "%.2e " x
-err(val, ref) = min(1, max(eps(Float64), abs((val-ref)/ref)))
+err(val::T, ref::T) where {T} = min(1, max(eps(T), abs((val-ref)/ref)))
+
+RUN_TESTS = true
 
 function accuracy_run(n, c1, c2, logstep, gen, funs, outfile)
+    RUN_TESTS || return
+
     data = [Float64[] for _ in 1:(1+length(funs))]
 
     c = c1
     while c < c2
         i = 1
-        (x, d, C) = gen(n, c)
+        (x, d, C) = gen(rand(n:n+10), c)
         output(C)
         push!(data[i], C)
 
@@ -43,14 +47,19 @@ function accuracy_plt(title, labels, outfile, pltfile)
             xlabel="Condition number",
             ylabel="Relative error")
 
+    markers = Symbol[:circle, :+, :rect, :x]
+
     for i in 1:length(labels)
-        scatter!(data[1], data[i+1], label=labels[i])
+        scatter!(data[1], data[i+1], label=labels[i], markershape=markers[i])
     end
 
     savefig(pltfile)
+    savefig(replace(pltfile, ".pdf"=>".svg"))
 end
 
 function performance_run(n1, n2, logstep, gen, funs, outfile)
+    RUN_TESTS || return
+
     data = [Float64[] for _ in 1:(1+length(funs))]
 
     n = n1
@@ -94,10 +103,13 @@ function performance_plt(title, labels, outfile, pltfile)
     end
 
     savefig(pltfile)
+    savefig(replace(pltfile, ".pdf"=>".svg"))
 end
 
 function ushift_run(gen, acc, outfile)
-    sizes = [10^i for i in 2:6]
+    RUN_TESTS || return
+
+    sizes = [2^(3*i) for i in 2:6]
     data = [[] for _ in 1:(1+length(sizes))]
     for ushift in 0:4
         i = 1
@@ -129,14 +141,15 @@ function ushift_plt(title, outfile, pltfile)
     labels = json["labels"]
 
     p = plot(title=title,
-             xlabel="u_shift",
+             xlabel="log2(U)",
              ylabel="Time [ns/elem]")
 
     for i in 1:length(labels)
-        plot!(data[1], data[i+1], label="10^$(Int(round(log10(labels[i])))) elems")
+        plot!(data[1], data[i+1], label="2^$(Int(round(log2(labels[i])))) elems")
     end
 
     savefig(pltfile)
+    savefig(replace(pltfile, ".pdf"=>".svg"))
 end
 
 function run_tests()
@@ -144,14 +157,14 @@ function run_tests()
 
     println("Running accuracy tests...")
 
-    begin
+    if true
         outfile = "sum_accuracy.json"
         pltfile = "sum_accuracy.pdf"
         function gen_sum(n, c)
             (x, d, c) = generate_sum(n, c)
             ((x,), d, c)
         end
-        accuracy_run(100, 2., 1e45, 2.,
+        accuracy_run(100, 2., 1e45, 2,
                      gen_sum,
                      (sum, sum_naive, sum_oro, sum_kbn),
                      outfile)
@@ -166,7 +179,7 @@ function run_tests()
             (x, y, d, c) = generate_dot(n, c)
             ((x, y), d, c)
         end
-        accuracy_run(100, 2., 1e45, 2.,
+        accuracy_run(100, 2., 1e45, 2,
                      gen_dot,
                      (dot, dot_naive, dot_oro),
                      outfile)
@@ -178,7 +191,7 @@ function run_tests()
 
     sleep(5)
     println("Finding optimal ushift...")
-    begin
+    if true
         outfile = "sum_naive_ushift.json"
         pltfile = "sum_naive_ushift.pdf"
         ushift_run(n->(rand(n),),
@@ -218,7 +231,7 @@ function run_tests()
 
     sleep(5)
     println("Running performance tests...")
-    begin
+    if true
         outfile = "sum_performance.json"
         pltfile = "sum_performance.pdf"
         performance_run(32, 1e8, 1.1,
