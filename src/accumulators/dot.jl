@@ -2,15 +2,15 @@ mutable struct DotAcc{T}
     s :: T
 end
 
-dotAcc(T) = DotAcc{T}(zero(T))
+dotAcc(T) = DotAcc{T}(vzero(T))
 
 function add!(acc::DotAcc, x, y)
-    Pirate.@explicit
+    SIMDops.@explicit
     acc.s += x * y
 end
 
 function add!(acc::DotAcc{T}, x::DotAcc{T}) where {T}
-    Pirate.@explicit
+    SIMDops.@explicit
     acc.s += x.s
 end
 

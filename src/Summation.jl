@@ -1,3 +1,14 @@
+module Summation
+export sum_naive, sum_kbn, sum_oro
+export dot_naive, dot_oro
+
+import VectorizationBase
+
+import ..SIMDops
+using  ..SIMDops: Vec, vload, vsum, vzero, fptype
+
+using ..EFT: two_sum, fast_two_sum, two_prod
+
 include("accumulators/sum.jl")
 include("accumulators/dot.jl")
 include("accumulators/compSum.jl")
@@ -8,10 +19,10 @@ include("accumulators/compDot.jl")
 # SIAM Journal on Scientific Computing, 6(26), 2005.
 # DOI: 10.1137/030601818
 @generated function accumulate(x::NTuple{A, AbstractArray{T}},
-                                 accType,
+                                 accType::F,
                                  rem_handling = Val(:scalar),
                                  ::Val{Ushift} = Val(2)
-                                 )  where {A, T <: Union{Float32,Float64}, Ushift}
+                                 )  where {F, A, T <: Union{Float32,Float64}, Ushift}
     @assert 0 ≤ Ushift < 6
     U = 1 << Ushift
 
@@ -22,6 +33,7 @@ include("accumulators/compDot.jl")
     V = Vec{W,T}
 
     quote
+        $(Expr(:meta,:inline))
         px = pointer.(x)
         N = length(first(x))
         Base.Cartesian.@nexprs $U u -> begin
@@ -78,4 +90,6 @@ sum_kbn(x)   = accumulate((x,), compSumAcc(fast_two_sum), Val(:scalar), Val(2))
 sum_oro(x)   = accumulate((x,), compSumAcc(two_sum),      Val(:scalar), Val(2))
 
 dot_naive(x, y) = accumulate((x,y), dotAcc,     Val(:scalar), Val(3))
-dot_oro(x, y)   = accumulate((x,y), compDotAcc, Val(:scalar), Val(3))
+dot_oro(x, y)   = accumulate((x,y), compDotAcc, Val(:scalar), Val(2))
+
+end

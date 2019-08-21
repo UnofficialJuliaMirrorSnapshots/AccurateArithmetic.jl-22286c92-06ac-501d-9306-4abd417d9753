@@ -2,15 +2,15 @@ mutable struct SumAcc{T}
     s :: T
 end
 
-sumAcc(T) = SumAcc{T}(zero(T))
+sumAcc(T) = SumAcc{T}(vzero(T))
 
 function add!(acc::SumAcc, x)
-    Pirate.@explicit
+    SIMDops.@explicit
     acc.s += x
 end
 
 function add!(acc::SumAcc{T}, x::SumAcc{T}) where {T}
-    Pirate.@explicit
+    SIMDops.@explicit
     acc.s += x.s
 end
 
